@@ -15,6 +15,9 @@ with CustomObjectScope({'GlorotUniform': glorot_uniform()}):
 img = cv2.imread('swift.jpg',0)
 #enter the image
 img= cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+rfid=list(input("Enter the RFID value in lower case  :"))
+
+
 def firstCrop(img, predictions):
     predictions.sort(key=lambda x: x.get('confidence'))
     xtop = predictions[-1].get('topleft').get('x')
@@ -37,6 +40,7 @@ def secondCrop(img):
     else:
         secondCrop = img
     return secondCrop
+
 
 def yoloCrop(predictions,img):
     positions = []
@@ -64,7 +68,6 @@ img = secondCrop(firstCropImg)
 img1=img.copy()
 predictions = yoloCharacter.return_predict(img)
 img=yoloCrop(predictions,img)
-
 gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 #gray = cv2.medianBlur(gray, 3)
 gray = cv2.threshold(gray, 0, 255,cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
@@ -74,19 +77,22 @@ height_abc=gray.shape[0]
 width_abc=gray.shape[1]
 diff_h=img1.shape[0]-height_abc
 diff_w=img1.shape[1]-width_abc
-if diff_w % 2 == 0:
-    x1 = np.ones(shape=(height_abc, diff_w//2))
-    x2 = x1
-else:
-    x1 = np.ones(shape=(height_abc, diff_w//2))
-    x2 = np.ones(shape=(height_abc, (diff_w//2)+1))
-
+x1 = np.ones(shape=(height_abc, diff_w//2))
+x2 = x1
 gray= np.concatenate((x1, gray, x2), axis=1)
 x1 = np.ones(shape=(diff_h//2, gray.shape[1]))
 x2 = x1
 gray= np.concatenate((x1, gray, x2), axis=0)
 pytesseract.pytesseract.tesseract_cmd = 'C:/Program Files/Tesseract-OCR/tesseract'
-text = pytesseract.image_to_string(gray)
+number_plate = list(pytesseract.image_to_string(gray).lower().replace(" ",''))
+print(rfid)
+print(number_plate)
+
+
+if number_plate==rfid:
+    print("Open the toll gate")
+else:
+    print("close the toll Gate")
 
 cv2.imshow('Second crop plate',gray) 
 cv2.waitKey(0)
