@@ -7,17 +7,20 @@ from keras.initializers import glorot_uniform
 import pytesseract
 from difflib import SequenceMatcher
 
-options = {"pbLoad": "yolo-plate.pb", "metaLoad": "yolo-plate.meta",}
+options = {"pbLoad": "yolo-plate.pb", "metaLoad": "yolo-plate.meta","gpu":0.8}
 yoloPlate = TFNet(options)
-options = {"pbLoad": "yolo-character.pb", "metaLoad": "yolo-character.meta"}
+options = {"pbLoad": "yolo-character.pb", "metaLoad": "yolo-character.meta","gpu":0.8}
 yoloCharacter = TFNet(options)
 with CustomObjectScope({'GlorotUniform': glorot_uniform()}):
     characterRecognition = load_model('character_recognition.h5')
-img = cv2.imread('swift.jpg',0)
+img = cv2.imread('city.jpg',0)
 #enter the image
+rfid=input("Enter the RFID value in lower case  :")
 img= cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-rfid=list(input("Enter the RFID value in lower case  :"))
 
+
+def similar(a, b):
+    return SequenceMatcher(None, a, b).ratio()
 
 def firstCrop(img, predictions):
     predictions.sort(key=lambda x: x.get('confidence'))
@@ -27,6 +30,7 @@ def firstCrop(img, predictions):
     ybottom = predictions[-1].get('bottomright').get('y')
     firstCrop = img[ytop:ybottom, xtop:xbottom]
     return firstCrop
+
 
 def secondCrop(img):
     gray=cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
@@ -44,7 +48,6 @@ def secondCrop(img):
 
 
 def yoloCrop(predictions,img):
-    positions = []
     x_top=[]
     x_bottom=[]
     y_top=[]
@@ -52,7 +55,6 @@ def yoloCrop(predictions,img):
     for i in predictions:
         if i.get("confidence")>0.20:
             xtop = i.get('topleft').get('x')
-            positions.append(xtop)
             x_top.append(xtop)
             ytop = i.get('topleft').get('y')
             y_top.append(ytop)
@@ -62,10 +64,6 @@ def yoloCrop(predictions,img):
             y_bottom.append(ybottom)
     abc=img[min(y_top)-10:max(y_bottom)+10,min(x_top)-5:max(x_bottom)+10]    
     return abc
-
-
-def similar(a, b):
-    return SequenceMatcher(None, a, b).ratio()
 
 
 predictions = yoloPlate.return_predict(img)
@@ -78,11 +76,12 @@ gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 #gray = cv2.medianBlur(gray, 3)
 gray = cv2.threshold(gray, 0, 255,cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
 gray = cv2.medianBlur(gray, 3)
-print(gray.shape[0],gray.shape[1])
 height_abc=gray.shape[0]
 width_abc=gray.shape[1]
 diff_h=img1.shape[0]-height_abc
 diff_w=img1.shape[1]-width_abc
+
+
 x1 = np.ones(shape=(height_abc, diff_w//2))
 x2 = x1
 gray= np.concatenate((x1, gray, x2), axis=1)
@@ -90,16 +89,19 @@ x1 = np.ones(shape=(diff_h//2, gray.shape[1]))
 x2 = x1
 gray= np.concatenate((x1, gray, x2), axis=0)
 pytesseract.pytesseract.tesseract_cmd = 'C:/Program Files/Tesseract-OCR/tesseract'
-number_plate = pytesseract.image_to_string(gray).lower().replace(" ",'')
-print(rfid)
-print(number_plate)
 
+
+number_plate = pytesseract.image_to_string(gray).lower().replace(" ",'')
+print(number_plate)
 
 if similar(rfid,number_plate)>0.8:
     print("Open the toll gate")
+    print("Similarity: ",similar(rfid,number_plate))
 else:
     print("close the toll Gate")
-
+    print("Similarity: ",similar(rfid,number_plate))
+    
+    
 cv2.imshow('Second crop plate',gray) 
 cv2.waitKey(0)
 cv2.destroyAllWindows()
