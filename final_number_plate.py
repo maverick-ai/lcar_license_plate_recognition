@@ -5,6 +5,7 @@ from keras.models import load_model
 from keras.utils import CustomObjectScope
 from keras.initializers import glorot_uniform
 import pytesseract
+from difflib import SequenceMatcher
 
 options = {"pbLoad": "yolo-plate.pb", "metaLoad": "yolo-plate.meta",}
 yoloPlate = TFNet(options)
@@ -62,6 +63,11 @@ def yoloCrop(predictions,img):
     abc=img[min(y_top)-10:max(y_bottom)+10,min(x_top)-5:max(x_bottom)+10]    
     return abc
 
+
+def similar(a, b):
+    return SequenceMatcher(None, a, b).ratio()
+
+
 predictions = yoloPlate.return_predict(img)
 firstCropImg = firstCrop(img, predictions)
 img = secondCrop(firstCropImg)
@@ -84,12 +90,12 @@ x1 = np.ones(shape=(diff_h//2, gray.shape[1]))
 x2 = x1
 gray= np.concatenate((x1, gray, x2), axis=0)
 pytesseract.pytesseract.tesseract_cmd = 'C:/Program Files/Tesseract-OCR/tesseract'
-number_plate = list(pytesseract.image_to_string(gray).lower().replace(" ",''))
+number_plate = pytesseract.image_to_string(gray).lower().replace(" ",'')
 print(rfid)
 print(number_plate)
 
 
-if number_plate==rfid:
+if similar(rfid,number_plate)>0.8:
     print("Open the toll gate")
 else:
     print("close the toll Gate")
